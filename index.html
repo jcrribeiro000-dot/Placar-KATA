@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Kata - Miyamoto Damashii - v1.3</title>
+    <title>Sistema de Kata - Miyamoto Damashii - v1.4</title>
     <style>
         :root {
             --bg-color: #0b0c10;
@@ -276,7 +276,7 @@
 
     <header>
         <h1>Miyamoto Damashii</h1>
-        <div class="version-badge">Sistema de Lançamento de Kata - Versão 1.3</div>
+        <div class="version-badge">Sistema de Lançamento de Kata - Versão 1.4</div>
         <div class="category-container">
             <input type="text" id="category-title" placeholder="Nome da Categoria" value="Kata Oficial - Categoria Geral">
         </div>
@@ -345,11 +345,11 @@
     </div>
 
     <script>
-        // Estado da Aplicação - Versão 1.3
-        let athletes = JSON.parse(localStorage.getItem('kata_athletes_v1.3')) || [];
+        // Estado da Aplicação - Versão 1.4
+        let athletes = JSON.parse(localStorage.getItem('kata_athletes_v1.4')) || [];
 
         function saveToStorage() {
-            localStorage.setItem('kata_athletes_v1.3', JSON.stringify(athletes));
+            localStorage.setItem('kata_athletes_v1.4', JSON.stringify(athletes));
         }
 
         function calculatePreview() {
@@ -465,39 +465,57 @@
                 return tieB - tieA;
             });
 
-            // Mapeia totais para verificação de empates
-            const totalGroup = {};
+            // Mapeamento de posições únicas por Nota Principal
+            const totalGroups = [];
             sorted.forEach(a => {
-                const key = `${a.total}`;
-                totalGroup[key] = (totalGroup[key] || 0) + 1;
+                if (!totalGroups.includes(a.total)) {
+                    totalGroups.push(a.total);
+                }
             });
 
-            sorted.forEach((athlete, rankIndex) => {
+            // Contagem de repetições da nota principal
+            const totalCounts = {};
+            sorted.forEach(a => {
+                totalCounts[a.total] = (totalCounts[a.total] || 0) + 1;
+            });
+
+            sorted.forEach((athlete, index) => {
                 const tr = document.createElement('tr');
-                const rank = rankIndex + 1;
-                let rankBadge = `${rank}º`;
+
+                // Posição do grupo de notas principais (1º, 2º, 3º grupo...)
+                const mainRank = totalGroups.indexOf(athlete.total) + 1;
+                
+                // Define a posição na tela: se não houver nota de desempate, empata na posição do grupo
+                let currentRank = mainRank;
+                if (athlete.tieScore !== null) {
+                    currentRank = index + 1;
+                }
+
+                let rankBadge = `${currentRank}º`;
                 let rowClass = '';
 
-                if (rank === 1) {
+                if (currentRank === 1) {
                     rowClass = 'rank-1';
                     rankBadge = `<span class="badge-podium badge-1">1º LUGAR</span>`;
-                } else if (rank === 2) {
+                } else if (currentRank === 2) {
                     rowClass = 'rank-2';
                     rankBadge = `<span class="badge-podium badge-2">2º LUGAR</span>`;
-                } else if (rank === 3) {
+                } else if (currentRank === 3) {
                     rowClass = 'rank-3';
                     rankBadge = `<span class="badge-podium badge-3">3º LUGAR</span>`;
                 }
 
                 if (rowClass) tr.className = rowClass;
 
-                // Verifica se há empate na nota total principal
-                const isTiedTotal = totalGroup[`${athlete.total}`] > 1 && rank <= 3;
-                let tieAlert = isTiedTotal ? `<span class="badge-tie">EMPATE</span>` : '';
+                // Verifica se há empate na nota principal e se está no grupo do pódio
+                const isTiedOnMainNote = totalCounts[athlete.total] > 1;
+                const isPodiumTiedGroup = mainRank <= 3 && isTiedOnMainNote;
 
-                // Coluna de Desempate (exibida em caso de empate ou se já tiver nota gravada)
+                let tieAlert = (isPodiumTiedGroup && athlete.tieScore === null) ? `<span class="badge-tie">EMPATE</span>` : '';
+
+                // Abre o campo de desempate para os empatados do pódio
                 let tieCellHTML = '---';
-                if (isTiedTotal || athlete.tieScore !== null) {
+                if (isPodiumTiedGroup || athlete.tieScore !== null) {
                     const currentTieValue = athlete.tieScore !== null ? athlete.tieScore : '';
                     tieCellHTML = `
                         <div class="tie-cell">
